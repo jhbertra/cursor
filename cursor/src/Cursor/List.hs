@@ -27,6 +27,8 @@ module Cursor.List
     listCursorAppendList,
     listCursorRemove,
     listCursorDelete,
+    listCursorRemoveUntil,
+    listCursorDeleteUntil,
     listCursorSplit,
     listCursorCombine,
     traverseListCursor,
@@ -118,24 +120,10 @@ listCursorNextItem lc =
     (c : _) -> Just c
 
 listCursorPrevUntil :: (a -> Bool) -> ListCursor a -> ListCursor a
-listCursorPrevUntil p = go
-  where
-    go lc =
-      case listCursorPrev lc of
-        [] -> lc
-        (c : _)
-          | p c -> lc
-        _ -> maybe lc go (listCursorSelectPrev lc)
+listCursorPrevUntil = listCursorOperatePrevUntil listCursorSelectPrev
 
 listCursorNextUntil :: (a -> Bool) -> ListCursor a -> ListCursor a
-listCursorNextUntil p = go
-  where
-    go lc =
-      case listCursorNext lc of
-        [] -> lc
-        (c : _)
-          | p c -> lc
-        _ -> maybe lc go (listCursorSelectNext lc)
+listCursorNextUntil = listCursorOperateNextUntil listCursorSelectNext
 
 listCursorInsert :: a -> ListCursor a -> ListCursor a
 listCursorInsert c lc = lc {listCursorPrev = c : listCursorPrev lc}
@@ -166,6 +154,34 @@ listCursorDelete tc =
         [] -> Just Deleted
         _ -> Nothing
     (_ : next) -> Just $ Updated $ tc {listCursorNext = next}
+
+listCursorRemoveUntil :: (a -> Bool) -> ListCursor a -> ListCursor a
+listCursorRemoveUntil = listCursorOperatePrevUntil $ dullMDelete . listCursorRemove
+
+listCursorDeleteUntil :: (a -> Bool) -> ListCursor a -> ListCursor a
+listCursorDeleteUntil = listCursorOperateNextUntil $ dullMDelete . listCursorDelete
+
+listCursorOperateNextUntil ::
+  (ListCursor a -> Maybe (ListCursor a)) -> (a -> Bool) -> ListCursor a -> ListCursor a
+listCursorOperateNextUntil goNext p = go
+  where
+    go lc =
+      case listCursorNext lc of
+        [] -> lc
+        (c : _)
+          | p c -> lc
+        _ -> maybe lc go (goNext lc)
+
+listCursorOperatePrevUntil ::
+  (ListCursor a -> Maybe (ListCursor a)) -> (a -> Bool) -> ListCursor a -> ListCursor a
+listCursorOperatePrevUntil goPrev p = go
+  where
+    go lc =
+      case listCursorPrev lc of
+        [] -> lc
+        (c : _)
+          | p c -> lc
+        _ -> maybe lc go (goPrev lc)
 
 listCursorSplit :: ListCursor a -> (ListCursor a, ListCursor a)
 listCursorSplit ListCursor {..} =

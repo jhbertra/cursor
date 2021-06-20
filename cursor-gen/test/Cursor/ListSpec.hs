@@ -69,14 +69,60 @@ spec = do
       case listCursorPrevItem result of
         Just item -> item `shouldSatisfy` predicate
         Nothing -> pure ()
+    it "preserves the contents" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorPrevUntil @Bool predicate cursor
+      rebuildListCursor result `shouldBe` rebuildListCursor cursor
   describe "listCursorNextUntil" $ do
     it "produces valid cursors" $ producesValidsOnValids (listCursorNextUntil @Bool id)
-    it "produces a cursor where the previous item either satisfies the predicate or is empty" $ forAllValid $ \cursor -> do
+    it "produces a cursor where the next item either satisfies the predicate or is empty" $ forAllValid $ \cursor -> do
       let predicate = id
           result = listCursorNextUntil @Bool predicate cursor
       case listCursorNextItem result of
         Just item -> item `shouldSatisfy` predicate
         Nothing -> pure ()
+    it "preserves the contents" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorNextUntil @Bool predicate cursor
+      rebuildListCursor result `shouldBe` rebuildListCursor cursor
+  describe "listCursorRemoveUntil" $ do
+    it "produces valid cursors" $ producesValidsOnValids (listCursorRemoveUntil @Bool id)
+    it "produces a cursor where the previous item either satisfies the predicate or is empty" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorRemoveUntil @Bool predicate cursor
+      case listCursorPrevItem result of
+        Just item -> item `shouldSatisfy` predicate
+        Nothing -> pure ()
+    it "produces a cursor where the next item is the same as before" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorRemoveUntil @Bool predicate cursor
+      listCursorNextItem result `shouldBe` listCursorNextItem cursor
+    it "produces a cursor where the prev item is not the same as before, provided it exists and does not satisfy the predicate" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorRemoveUntil @Bool predicate cursor
+      case listCursorPrevItem cursor of
+        Just item
+          | not $ predicate item -> Just item `shouldNotBe` listCursorPrevItem result
+        _ -> pure ()
+  describe "listCursorDeleteUntil" $ do
+    it "produces valid cursors" $ producesValidsOnValids (listCursorDeleteUntil @Bool id)
+    it "produces a cursor where the next item either satisfies the predicate or is empty" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorDeleteUntil @Bool predicate cursor
+      case listCursorNextItem result of
+        Just item -> item `shouldSatisfy` predicate
+        Nothing -> pure ()
+    it "produces a cursor where the previous item is the same as before" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorDeleteUntil @Bool predicate cursor
+      listCursorPrevItem result `shouldBe` listCursorPrevItem cursor
+    it "produces a cursor where the next item is not the same as before, provided it exists and does not satisfy the predicate" $ forAllValid $ \cursor -> do
+      let predicate = id
+          result = listCursorDeleteUntil @Bool predicate cursor
+      case listCursorNextItem cursor of
+        Just item
+          | not $ predicate item -> Just item `shouldNotBe` listCursorNextItem result
+        _ -> pure ()
   describe "listCursorSelectStart" $ do
     it "produces valid cursors" $ producesValidsOnValids (listCursorSelectStart @Bool)
     it "is a movement" $ isMovement listCursorSelectStart
