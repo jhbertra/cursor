@@ -29,6 +29,7 @@ module Cursor.Text
     textCursorAppendText,
     textCursorRemove,
     textCursorDelete,
+    textCursorRemoveWord,
     textCursorSplit,
     textCursorCombine,
   )
@@ -221,6 +222,19 @@ textCursorAppendText = textCursorAppendString . T.unpack
 
 textCursorRemove :: TextCursor -> Maybe (DeleteOrUpdate TextCursor)
 textCursorRemove = focusPossibleDeleteOrUpdate textCursorListCursorL listCursorRemove
+
+-- | Remove until the cursor hits the next word beginning
+--
+-- * @"hello|"@ -> @Just (Updated "|")@
+-- * @"hello w|orld"@ -> @Just (Updated "hello |orld")@
+-- * @"hello |world"@ -> @Just (Updated "|world")@
+-- * @" h|ello"@ -> @Just (Updated " |ello")@
+-- * @" |hello"@ -> @Just (Updated "|hello")@
+-- * @" |"@ -> @Just (Updated "|")@
+-- * @"|"@ -> @Just Deleted@
+-- * @"|hello"@ -> @Nothing@
+textCursorRemoveWord :: TextCursor -> Maybe (DeleteOrUpdate TextCursor)
+textCursorRemoveWord tc = Just (Updated tc)
 
 textCursorDelete :: TextCursor -> Maybe (DeleteOrUpdate TextCursor)
 textCursorDelete = focusPossibleDeleteOrUpdate textCursorListCursorL listCursorDelete

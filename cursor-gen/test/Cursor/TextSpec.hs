@@ -183,6 +183,12 @@ spec = do
                 Just (Updated (TextCursor (ListCursor _ n))) ->
                   n `shouldBe` tail (textCursorNext tc)
                 _ -> pure ()
+  describe "textCursorRemoveWord" $ do
+    it "produces valids" $ validIfSucceedsOnValid textCursorRemoveWord
+    isRemove textCursorRemoveWord
+  -- describe "textCursorDeleteWord" $ do
+  --   it "produces valids" $ validIfSucceedsOnValid textCursorDeleteWord
+  --   isDelete textCursorDeleteWord
   describe "textCursorSelectBeginWord" $ do
     it "produces valid items" $ producesValidsOnValids textCursorSelectBeginWord
     it "is idempotent" $ isIdempotentForSentence textCursorSelectBeginWord
@@ -275,19 +281,31 @@ isMovement func =
 
 isRemove :: (TextCursor -> Maybe (DeleteOrUpdate TextCursor)) -> Spec
 isRemove func = do
+  it "If it produces a new cursor, it will be smaller"
+    $ forAllValid
+    $ \tc -> case func tc of
+               Just (Updated tc') -> T.length (rebuildTextCursor tc') `shouldSatisfy` (< T.length (rebuildTextCursor tc))
+               _ -> pure ()
   it "preserves everything after the cursor"
     $ forAllValid
-    $ \tc -> case func tc of
-               Just (Updated tc') -> textCursorNext tc' `shouldBe` textCursorNext tc
-               _ -> pure ()
+    $ \tc ->
+      case func tc of
+        Just (Updated tc') -> textCursorNext tc' `shouldBe` textCursorNext tc
+        _ -> pure ()
   it "turns everything before the cursor into a prefix"
     $ forAllValid
-    $ \tc -> case func tc of
-               Just (Updated tc') -> textCursorPrev tc' `shouldSatisfy` (flip isSuffixOf $ textCursorPrev tc)
-               _ -> pure ()
+    $ \tc ->
+      case func tc of
+        Just (Updated tc') -> textCursorPrev tc' `shouldSatisfy` (flip isSuffixOf $ textCursorPrev tc)
+        _ -> pure ()
 
 isDelete :: (TextCursor -> Maybe (DeleteOrUpdate TextCursor)) -> Spec
 isDelete func = do
+  it "If it produces a new cursor, it will be smaller"
+    $ forAllValid
+    $ \tc -> case func tc of
+               Just (Updated tc') -> T.length (rebuildTextCursor tc') `shouldSatisfy` (< T.length (rebuildTextCursor tc))
+               _ -> pure ()
   it "preserves everything before the cursor"
     $ forAllValid
     $ \tc -> case func tc of
